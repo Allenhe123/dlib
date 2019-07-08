@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+message Blink
+{
+    repeated double ears = 1;
+    repeated int32 blink_idx = 2;
+    optional int32 blink_num = 3;   
+}
+
+message Yaw 
+{
+    repeated double ears = 1;
+    repeated int32 yaw_idx = 2;
+    optional int32 yaw_num = 3;
+}
