@@ -81,6 +81,7 @@ const int EYE_AR_CONSEC_FRAMES = 10;
 const double YAW_THRESH = 1.0;
 const int YAW_FRAMES = 25;
 
+const bool WRITE_DATA = false;
 // ----------------------------------------------------------------------------------------
 
 inline std::vector<image_window::overlay_line> allen_render_face_detections (
@@ -217,7 +218,8 @@ double mouth_ear(const full_object_detection& fod)
 }
 
 // ----------------------------------------------------------------------------------------
-
+// ./allen_face_landmark_detection_ex shape_predictor_68_face_landmarks.dat 1 ~/myproject/dms/BlinkDetect/14-MaleNoGlasses.avi
+// ./allen_face_landmark_detection_ex shape_predictor_68_face_landmarks.dat 0 abc
 int main(int argc, char** argv)
 {
     try
@@ -234,6 +236,11 @@ int main(int argc, char** argv)
             cout << "http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2" << endl;
             return 0;
         }
+        else if (argc < 4)
+        {
+            cout << "invalid parameters" << endl;
+            return 0;
+        }
 
         // We need a face detector.  We will use this to get bounding boxes for
         // each face in an image.
@@ -245,8 +252,9 @@ int main(int argc, char** argv)
         shape_predictor sp;
         deserialize(argv[1]) >> sp;
 
-        cv::VideoCapture capture;
-        capture.open(argv[2]);
+        cv::VideoCapture capture(0);
+        if (std::atoi(argv[2]) == 1)
+            capture.open(argv[3]);
         if (!capture.isOpened())
         {
             std::cout << "can not load the video" << std::endl;
@@ -374,54 +382,57 @@ int main(int argc, char** argv)
             }
         }
 
-        std::ofstream ofs("blink.dat");
-        if (ofs.is_open())
+        if (WRITE_DATA)
         {
-            Blink blink;
-            for (auto v : ear_vec)
+            std::ofstream ofs("blink.dat");
+            if (ofs.is_open())
             {
-                blink.add_ears(v);
+                Blink blink;
+                for (auto v : ear_vec)
+                {
+                    blink.add_ears(v);
+                }
+
+                for (auto v : blink_idx_vec)
+                {
+                    blink.add_blink_idx(v);
+                }
+
+                blink.set_blink_num(TOTAL);
+
+                blink.SerializePartialToOstream(&ofs);
+
+                ofs.close();
+            }
+            else
+            {
+                std::cout << "blink.dat open failed." << std::endl;
             }
 
-            for (auto v : blink_idx_vec)
+            std::ofstream ofs_yaw("yaw.dat");
+            if (ofs_yaw.is_open())
             {
-                blink.add_blink_idx(v);
+                Yaw yaw;
+                for (auto v : mouth_ear_vec)
+                {
+                    yaw.add_ears(v);
+                }
+
+                for (auto v : yaw_idx_vec)
+                {
+                    yaw.add_yaw_idx(v);
+                }
+
+                yaw.set_yaw_num(TOTAL_YAW);
+
+                yaw.SerializePartialToOstream(&ofs_yaw);
+
+                ofs_yaw.close();
             }
-
-            blink.set_blink_num(TOTAL);
-
-            blink.SerializePartialToOstream(&ofs);
-
-            ofs.close();
-        }
-        else
-        {
-            std::cout << "blink.dat open failed." << std::endl;
-        }
-
-        std::ofstream ofs_yaw("yaw.dat");
-        if (ofs_yaw.is_open())
-        {
-            Yaw yaw;
-            for (auto v : mouth_ear_vec)
+            else
             {
-                yaw.add_ears(v);
+                std::cout << "yaw.dat open failed." << std::endl;
             }
-
-            for (auto v : yaw_idx_vec)
-            {
-                yaw.add_yaw_idx(v);
-            }
-
-            yaw.set_yaw_num(TOTAL_YAW);
-
-            yaw.SerializePartialToOstream(&ofs_yaw);
-
-            ofs_yaw.close();
-        }
-        else
-        {
-            std::cout << "yaw.dat open failed." << std::endl;
         }
     }
     catch (exception& e)
